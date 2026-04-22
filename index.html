@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instant Rips -- Attack Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#fff;--bg2:#f5f5f4;--bg3:#eeece8;
+  --tx:#1a1a1a;--tx2:#6b6b6b;
+  --bd:rgba(0,0,0,0.12);--bd2:rgba(0,0,0,0.22);
+  --r:8px;--rl:12px;
+  --ok:#1a7f4b;--info:#185fa5;--bad:#a32d2d;--warn:#92400e;
+  --f:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --fm:'SFMono-Regular',Consolas,monospace;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1a;--bg2:#252522;--bg3:#2e2e2a;
+  --tx:#e8e6e0;--tx2:#9a9890;
+  --bd:rgba(255,255,255,0.1);--bd2:rgba(255,255,255,0.2);
+  --ok:#4ade80;--info:#60a5fa;--bad:#f87171;--warn:#fbbf24;
+}}
+body{font-family:var(--f);background:var(--bg3);color:var(--tx);min-height:100vh;padding:1.5rem 1rem;}
+.wrap{max-width:1200px;margin:0 auto;}
+h1{font-size:22px;font-weight:500;margin-bottom:4px;}
+.sub{font-size:13px;color:var(--tx2);margin-bottom:1.25rem;}
+
+/* Search */
+.search-bar{display:flex;gap:10px;align-items:center;margin-bottom:1.25rem;background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);padding:12px 16px;}
+.search-bar input{flex:1;font-size:14px;border:none;outline:none;background:transparent;color:var(--tx);}
+.search-bar input::placeholder{color:var(--tx2);}
+.sr-wrap{background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);margin-bottom:1.25rem;overflow:hidden;}
+.sr-head{padding:8px 16px;background:var(--bg2);border-bottom:0.5px solid var(--bd);font-size:12px;color:var(--tx2);display:flex;justify-content:space-between;}
+.sr-row{display:flex;align-items:center;gap:10px;padding:7px 16px;border-bottom:0.5px solid var(--bd);font-size:12px;}
+.sr-row:last-child{border-bottom:none;}
+.sr-row:hover{background:var(--bg2);}
+.sr-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sr-pack{font-size:11px;color:var(--tx2);white-space:nowrap;}
+.sr-val{font-size:12px;font-weight:500;white-space:nowrap;}
+.sr-empty{padding:16px;text-align:center;color:var(--tx2);font-size:13px;}
+
+/* Dashboard grid */
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:2rem;}
+
+/* Slot */
+.slot{background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;display:flex;flex-direction:column;}
+.slot-header{padding:12px 16px;border-bottom:0.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.slot-price{font-size:18px;font-weight:500;}
+.slot-label{font-size:11px;color:var(--tx2);}
+.slot-body{padding:14px 16px;flex:1;}
+.slot-footer{padding:10px 16px;border-top:0.5px solid var(--bd);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.slot-time{font-size:10px;color:var(--tx2);margin-left:auto;}
+
+/* Urgency badges */
+.ubadge{display:inline-flex;align-items:center;font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px;}
+.u-attack{background:#ef4444;color:#fff;border:1px solid #dc2626;font-weight:700;letter-spacing:0.04em;animation:pulse 1.6s ease-in-out infinite;}
+.u-watch{background:#fff7ed;color:#92400e;border:1px solid #fcd34d;}
+.u-neutral{background:#fefce8;color:#713f12;border:1px solid #fde68a;}
+.u-pass{background:#f0fdf4;color:#14532d;border:1px solid #86efac;}
+.u-empty{background:var(--bg2);color:var(--tx2);border:1px solid var(--bd);}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,0.5);}60%{box-shadow:0 0 0 6px rgba(239,68,68,0);}100%{box-shadow:0 0 0 0 rgba(239,68,68,0);}}
+@media(prefers-color-scheme:dark){
+  .u-watch{background:#431407;color:#fcd34d;border-color:#92400e;}
+  .u-neutral{background:#422006;color:#fde68a;border-color:#713f12;}
+  .u-pass{background:#052e16;color:#86efac;border-color:#14532d;}
+}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.metric{background:var(--bg2);border-radius:var(--r);padding:8px 10px;}
+.mlbl{font-size:10px;color:var(--tx2);margin-bottom:2px;}
+.mval{font-size:16px;font-weight:500;}
+.mval.pos{color:var(--ok);}.mval.neg{color:var(--bad);}.mval.warn{color:#f59e0b;}
+
+/* Base stats */
+.base-stats{background:var(--bg2);border-radius:var(--r);padding:10px 12px;margin-bottom:12px;}
+.base-stats-title{font-size:10px;color:var(--tx2);margin-bottom:6px;font-weight:500;}
+.base-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.bs-lbl{font-size:9px;color:var(--tx2);}
+.bs-val{font-size:14px;font-weight:500;}
+
+/* EV bar */
+.ev-section{margin-bottom:12px;}
+.ev-row{display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-bottom:4px;}
+.ev-bg{height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;}
+.ev-fill{height:8px;border-radius:4px;}
+
+/* Urgency score bar */
+.urg-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.urg-bg{flex:1;height:10px;background:var(--bg2);border-radius:5px;overflow:hidden;}
+.urg-fill{height:10px;border-radius:5px;}
+.urg-num{font-size:13px;font-weight:500;min-width:36px;text-align:right;}
+.urg-def{font-size:10px;color:var(--tx2);line-height:1.5;margin-bottom:12px;padding:6px 8px;background:var(--bg2);border-radius:var(--r);border-left:2px solid #888;}
+
+/* Tier survival */
+.deg-section{margin-bottom:12px;}
+.deg-title{font-size:11px;font-weight:500;color:var(--tx2);margin-bottom:6px;}
+.deg-row{display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:3px;}
+.deg-lbl{color:var(--tx2);width:90px;flex-shrink:0;}
+.deg-bg{flex:1;height:5px;background:var(--bg2);border-radius:3px;}
+.deg-fill{height:5px;border-radius:3px;}
+.deg-val{color:var(--tx2);min-width:40px;text-align:right;}
+
+/* Score breakdown */
+.sb-lbl{color:var(--tx2);width:120px;flex-shrink:0;}
+
+/* Breakeven */
+.bk-section{margin-bottom:12px;border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden;}
+.bk-title{font-size:11px;font-weight:500;color:var(--tx2);padding:7px 10px;background:var(--bg2);border-bottom:0.5px solid var(--bd);}
+.bk-grid{display:grid;grid-template-columns:repeat(3,1fr);}
+.bk-cell{padding:8px 10px;border-right:0.5px solid var(--bd);}
+.bk-cell:last-child{border-right:none;}
+.bk-lbl{font-size:9px;color:var(--tx2);margin-bottom:3px;line-height:1.3;}
+.bk-num{font-size:15px;font-weight:500;}
+.bk-num.good{color:var(--ok);}.bk-num.warn{color:#f59e0b;}.bk-num.bad{color:var(--bad);}
+.bk-sub{font-size:9px;color:var(--tx2);margin-top:2px;}
+.bk-skew{font-size:10px;color:#f59e0b;padding:5px 10px;background:#fff7ed;border-top:0.5px solid #fcd34d;}
+@media(prefers-color-scheme:dark){.bk-skew{background:#431407;border-color:#92400e;color:#fcd34d;}}
+
+/* Velocity */
+.vel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--bd);}
+.vel-lbl{font-size:9px;color:var(--tx2);}
+.vel-val{font-size:13px;font-weight:500;}
+
+/* Pulled cards */
+.pulled-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.pulled-title{font-size:11px;font-weight:500;color:var(--tx2);}
+.pulled-list{max-height:160px;overflow-y:auto;border:0.5px solid var(--bd);border-radius:var(--r);}
+.pulled-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:0.5px solid var(--bd);font-size:11px;}
+.pulled-row:last-child{border-bottom:none;}
+.pulled-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx);}
+.pulled-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+
+/* Badges */
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:var(--r);font-weight:500;}
+.bg{background:#FAEEDA;color:#633806;}
+.bc{background:#E6F1FB;color:#0C447C;}
+.bb{background:#F1EFE8;color:#444441;}
+@media(prefers-color-scheme:dark){
+  .bg{background:#412402;color:#FAC775;}
+  .bc{background:#042C53;color:#85B7EB;}
+  .bb{background:#2C2C2A;color:#B4B2A9;}
+}
+
+/* Pull / No Pull */
+.pull-badge{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;letter-spacing:0.03em;}
+.pull-yes{background:#16a34a;color:#fff;animation:pulse 1.6s ease-in-out infinite;}
+.pull-no{background:var(--bg2);color:var(--tx2);border:0.5px solid var(--bd);}
+.pull-na{background:var(--bg2);color:var(--tx2);border:0.5px solid var(--bd);font-weight:400;font-size:12px;}
+
+/* Notif bar */
+.notif-bar{display:flex;align-items:center;gap:10px;background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);padding:10px 16px;margin-bottom:1.25rem;font-size:12px;color:var(--tx2);}
+.notif-bar span{flex:1;}
+button{background:var(--bg);border:0.5px solid var(--bd2);border-radius:var(--r);padding:6px 14px;font-size:13px;color:var(--tx);cursor:pointer;font-family:var(--f);}
+button:hover{background:var(--bg2);}
+button:active{transform:scale(0.98);}
+.btn-primary{background:var(--info);color:#fff;border-color:var(--info);}
+.btn-primary:hover{opacity:0.9;}
+.btn-danger{color:var(--bad);border-color:var(--bad);}
+input,select{background:var(--bg);border:0.5px solid var(--bd2);border-radius:var(--r);padding:7px 10px;font-size:13px;color:var(--tx);font-family:var(--f);outline:none;}
+input:focus,select:focus{box-shadow:0 0 0 2px var(--info);}
+
+/* Main tabs */
+.main-tabs{display:flex;gap:4px;margin-bottom:1.25rem;border-bottom:0.5px solid var(--bd);}
+.main-tab{padding:7px 18px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--tx2);border-bottom:2px solid transparent;margin-bottom:-0.5px;font-family:var(--f);}
+.main-tab.on{color:var(--tx);font-weight:500;border-bottom:2px solid var(--tx);}
+.mpanel{display:none;}.mpanel.on{display:block;}
+
+/* P&L */
+.pnl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.25rem;}
+.pnl-stat{background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--r);padding:10px 14px;}
+.pnl-lbl{font-size:10px;color:var(--tx2);margin-bottom:3px;}
+.pnl-val{font-size:20px;font-weight:500;}
+.pnl-val.pos{color:var(--ok);}.pnl-val.neg{color:var(--bad);}.pnl-val.neu{color:var(--tx2);}
+.tier-pnl{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:1.25rem;}
+.tier-pnl-card{background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);padding:12px 14px;}
+.tier-pnl-label{font-size:11px;color:var(--tx2);margin-bottom:6px;}
+.tier-pnl-pnl{font-size:20px;font-weight:500;margin-bottom:2px;}
+.tier-pnl-sub{font-size:11px;color:var(--tx2);}
+.log-form{background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);padding:16px;margin-bottom:1.25rem;}
+.log-form-title{font-size:13px;font-weight:500;margin-bottom:12px;}
+.log-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;}
+.log-form label{font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;}
+.log-form input,.log-form select{width:100%;font-size:13px;}
+.log-table-wrap{background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;}
+.log-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+.log-table th{text-align:left;padding:8px 12px;font-size:11px;color:var(--tx2);border-bottom:0.5px solid var(--bd);font-weight:500;white-space:nowrap;}
+.log-table td{padding:7px 12px;border-bottom:0.5px solid var(--bd);color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.log-table tr:last-child td{border-bottom:none;}
+.log-table tr:hover td{background:var(--bg2);}
+.del-btn{background:none;border:none;color:var(--bad);cursor:pointer;font-size:11px;padding:2px 6px;}
+.chart-wrap{background:var(--bg);border:0.5px solid var(--bd);border-radius:var(--rl);padding:16px;margin-bottom:1.25rem;}
+.chart-title{font-size:13px;font-weight:500;margin-bottom:12px;}
+.chart-bars{display:flex;gap:4px;align-items:flex-end;height:120px;padding-bottom:20px;position:relative;border-bottom:0.5px solid var(--bd);}
+.chart-bar-wrap{display:flex;flex-direction:column;align-items:center;flex:1;height:100%;justify-content:flex-end;position:relative;}
+.chart-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height 0.3s;}
+.chart-bar-lbl{font-size:9px;color:var(--tx2);margin-top:4px;position:absolute;bottom:-18px;white-space:nowrap;}
+.chart-zero{position:absolute;bottom:20px;left:0;right:0;height:0.5px;background:var(--bd2);}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem;}
+.modal{background:var(--bg);border-radius:var(--rl);padding:20px 24px;width:100%;max-width:520px;display:flex;flex-direction:column;gap:12px;}
+.modal h2{font-size:16px;font-weight:500;}
+.modal-sub{font-size:12px;color:var(--tx2);}
+textarea{width:100%;height:180px;font-size:11px;font-family:var(--fm);resize:vertical;border:0.5px solid var(--bd2);border-radius:var(--r);padding:8px;background:var(--bg);color:var(--tx);outline:none;}
+textarea:focus{box-shadow:0 0 0 2px var(--info);}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;}
+.hint{font-size:11px;color:var(--tx2);line-height:1.5;}
+.empty-state{padding:20px 0;text-align:center;color:var(--tx2);font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Instant Rips -- Attack Dashboard</h1>
+  <p class="sub">Track checklist degradation, urgency scoring, and personal P&L across all price tiers.</p>
+
+  <div class="notif-bar" id="notif-bar">
+    <span id="notif-status">Enable browser notifications to get alerted when a pack reaches "Pull" status on snapshot update.</span>
+    <button id="notif-btn" onclick="requestNotifPermission()">Enable notifications</button>
+  </div>
+
+  <div class="main-tabs">
+    <button class="main-tab on" onclick="setMainTab('dashboard',this)">Attack Dashboard</button>
+    <button class="main-tab" onclick="setMainTab('pnl',this)">Personal P&amp;L</button>
+  </div>
+
+  <!-- DASHBOARD PANEL -->
+  <div id="panel-dashboard" class="mpanel on">
+    <div class="search-bar">
+      <span style="font-size:13px;color:var(--tx2);flex-shrink:0;">Search across all packs:</span>
+      <input type="text" id="gsearch" placeholder="Player name, card, set..." oninput="runSearch()" autocomplete="off" />
+      <button id="gclear" onclick="clearSearch()" style="display:none;font-size:12px;padding:4px 10px;">Clear</button>
+    </div>
+    <div id="gresults" style="display:none;"></div>
+    <div class="dashboard" id="dashboard"></div>
+  </div>
+
+  <!-- P&L PANEL -->
+  <div id="panel-pnl" class="mpanel">
+
+    <!-- Summary stats -->
+    <div class="pnl-grid" id="pnl-stats"></div>
+
+    <!-- Cumulative P&L chart -->
+    <div class="chart-wrap">
+      <div class="chart-title">Cumulative P&amp;L over time</div>
+      <div class="chart-bars" id="pnl-chart"><div style="color:var(--tx2);font-size:12px;margin:auto;">No rips logged yet.</div></div>
+    </div>
+
+    <!-- P&L by tier -->
+    <div class="tier-pnl" id="pnl-by-tier"></div>
+
+    <!-- Log a rip form -->
+    <div class="log-form">
+      <div class="log-form-title">Log a rip</div>
+      <div class="log-form-grid">
+        <div>
+          <label>Pack tier</label>
+          <select id="log-tier">
+            <option value="75">Baseball $75</option>
+            <option value="custom">Custom</option>
+            <option value="150">Baseball $150</option>
+            <option value="250">Baseball $250</option>
+            <option value="500">Baseball $500</option>
+            <option value="1000">Baseball $1,000</option>
+          </select>
+        </div>
+        <div>
+          <label>Pack price paid ($)</label>
+          <input type="number" id="log-price" min="1" step="1" placeholder="e.g. 75" />
+        </div>
+        <div>
+          <label>Card pulled</label>
+          <input type="text" id="log-card" placeholder="Card name (optional)" />
+        </div>
+        <div>
+          <label>Card Ladder value ($)</label>
+          <input type="number" id="log-val" min="0" step="0.01" placeholder="e.g. 138.00" />
+        </div>
+        <div>
+          <label>Card tier</label>
+          <select id="log-card-tier">
+            <option value="Base">Base</option>
+            <option value="Chase">Chase</option>
+            <option value="Grail">Grail</option>
+          </select>
+        </div>
+        <div>
+          <label>Notes (optional)</label>
+          <input type="text" id="log-notes" placeholder="e.g. attacked at 40 cards" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-primary" onclick="logRip()">Log rip</button>
+        <span id="log-status" style="font-size:12px;color:var(--tx2);"></span>
+      </div>
+    </div>
+
+    <!-- Rip log table -->
+    <div class="log-table-wrap">
+      <table class="log-table">
+        <thead><tr>
+          <th style="width:18%">Date/Time</th>
+          <th style="width:12%">Tier</th>
+          <th style="width:10%">Paid</th>
+          <th style="width:30%">Card pulled</th>
+          <th style="width:10%">CL Value</th>
+          <th style="width:10%">P&amp;L</th>
+          <th style="width:10%">Notes</th>
+          <th style="width:5%"></th>
+        </tr></thead>
+        <tbody id="log-tbody"></tbody>
+      </table>
+      <div id="log-empty" style="padding:20px;text-align:center;color:var(--tx2);font-size:13px;">No rips logged yet. Log your first rip above.</div>
+    </div>
+
+  </div><!-- end P&L panel -->
+
+</div>
+
+<div class="modal-overlay" id="modal" style="display:none;">
+  <div class="modal">
+    <h2 id="modal-title">Paste checklist</h2>
+    <p class="modal-sub" id="modal-sub"></p>
+    <textarea id="modal-ta" placeholder="Card Name&#10;Card Ladder Value $838.00&#10;Grail&#10;&#10;Another Card&#10;Card Ladder Value $280.00&#10;Chase"></textarea>
+    <p class="hint">Tip: use the bookmarklet on the Fanatics checklist page to copy data automatically.</p>
+    <div class="modal-btns">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitPaste()">Apply snapshot</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var TIERS = [
+  {price:75,   label:"Baseball $75",    custom:false},
+  {price:"custom", label:"Custom Pack", custom:true},
+  {price:150,  label:"Baseball $150",   custom:false},
+  {price:250,  label:"Baseball $250",   custom:false},
+  {price:500,  label:"Baseball $500",   custom:false},
+  {price:1000, label:"Baseball $1,000", custom:false}
+];
+
+var state = {};
+TIERS.forEach(function(t){
+  state[String(t.price)] = {snapshots:[], lastUpdated:null, customPrice:null};
+});
+
+var activeModal = null;
+
+// ---- Helpers ----
+function dollar(n) {
+  if (!n && n !== 0) return "--";
+  return "$" + Number(n).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function pct(n) { return (n * 100).toFixed(1) + "%"; }
+function sumArr(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
+function timeStr() {
+  var d = new Date();
+  return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+
+// ---- Parser ----
+function parsePaste(raw) {
+  var lines = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  for (var i = 0; i < lines.length; i++) lines[i] = lines[i].trim();
+  var result = [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (!line) continue;
+    var vm = line.match(/Card Ladder Value \$?([\d,]+(?:\.\d+)?)/i);
+    if (!vm) continue;
+    var val = Math.round(parseFloat(vm[1].replace(/,/g, "")) * 100) / 100;
+    var name = "", tier = "Base";
+    for (var f = i + 1; f <= Math.min(lines.length - 1, i + 5); f++) {
+      var fl = lines[f];
+      if (!fl) continue;
+      if (/^(Grail|Chase|Base)$/i.test(fl)) { tier = fl.charAt(0).toUpperCase() + fl.slice(1).toLowerCase(); break; }
+      if (/Card Ladder/i.test(fl)) break;
+    }
+    for (var b = i - 1; b >= Math.max(0, i - 8); b--) {
+      var bl = lines[b];
+      if (!bl) continue;
+      if (/Card Ladder/i.test(bl)) break;
+      if (/^(Grail|Chase|Base)$/i.test(bl)) continue;
+      name = bl; break;
+    }
+    if (name) result.push({name:name, val:val, tier:tier});
+  }
+  return result;
+}
+
+// ---- Pool stats ----
+function poolStats(cards) {
+  if (!cards || !cards.length) return null;
+  var ng = 0, nc = 0, nb = 0, sumVal = 0;
+  cards.forEach(function(c) {
+    sumVal += c.val;
+    if (c.tier === "Grail") ng++;
+    else if (c.tier === "Chase") nc++;
+    else nb++;
+  });
+  var total = cards.length;
+  return {total:total, ng:ng, nc:nc, nb:nb, hits:ng+nc, hitRate:(ng+nc)/total, avg:sumVal/total, sumVal:sumVal};
+}
+
+function baseStats(cards) {
+  if (!cards || !cards.length) return null;
+  var arr = [];
+  cards.forEach(function(c) { if (c.tier === "Base") arr.push(c.val); });
+  if (!arr.length) return null;
+  arr.sort(function(a,b) { return a - b; });
+  var avg = sumArr(arr) / arr.length;
+  var mid = arr.length % 2 === 0 ? (arr[arr.length/2-1] + arr[arr.length/2]) / 2 : arr[Math.floor(arr.length/2)];
+  var below = 0;
+  arr.forEach(function(v) { if (v < avg) below++; });
+  return {count:arr.length, avg:avg, median:mid, min:arr[0], max:arr[arr.length-1], below:below, above:arr.length-below};
+}
+
+function cardKey(c) {
+  // Normalize value to 2dp to prevent floating point mismatches between pastes
+  // Normalize name to trim whitespace and collapse internal spaces
+  var normName = c.name.toLowerCase().replace(/\s+/g, " ").trim();
+  var normVal = Math.round(c.val * 100) / 100;
+  return normName + "|" + normVal.toFixed(2) + "|" + c.tier.toLowerCase();
+}
+
+function diffSnapshots(orig, curr) {
+  // Build a count map for current snapshot using composite key
+  var currCounts = {};
+  curr.forEach(function(c) {
+    var k = cardKey(c);
+    currCounts[k] = (currCounts[k] || 0) + 1;
+  });
+  // For each card in orig, subtract from curr counts
+  // Any remaining (count > 0 deficit) = pulled
+  var pulled = [];
+  var seen = {};
+  orig.forEach(function(c) {
+    var k = cardKey(c);
+    seen[k] = (seen[k] || 0) + 1;
+    var origCount = seen[k];
+    var currCount = currCounts[k] || 0;
+    // This copy was pulled if orig has more copies than curr at this index
+    if (origCount > currCount) pulled.push(c);
+  });
+  return pulled;
+}
+
+// ---- Urgency score ----
+// Factors:
+// 1. EV Ratio       (30pts): remaining avg / pack price, benchmarked at 1.5x
+// 2. Hit survival   (20pts): % of original Grails+Chases still in pool
+// 3. Grail present  (20pts): binary -- any Grail remaining?
+// 4. Extraction     (15pts): sweet-spot degradation (25-60% value extracted)
+// 5. Pull velocity  (15pts): how fast cards are being pulled (needs 2 snapshots)
+// Attack Now: 80+  |  Watch: 65-79  |  Neutral: 40-64  |  Pass: 0-39
+function calcUrgency(price, origStats, currStats, pulled, origSnap, currSnap) {
+  if (!origStats || !currStats) return null;
+
+  var evRatio = currStats.avg / price;
+  var f1 = Math.min(evRatio / 1.5, 1);
+
+  var f2 = origStats.hits > 0 ? currStats.hits / origStats.hits : 0;
+
+  var f3 = currStats.ng > 0 ? 1 : 0;
+
+  var pulledVal = 0;
+  pulled.forEach(function(c) { pulledVal += c.val; });
+  var extractionRate = origStats.sumVal > 0 ? pulledVal / origStats.sumVal : 0;
+  var f4 = extractionRate < 0.1  ? 0.2 :
+           extractionRate < 0.25 ? 0.5 :
+           extractionRate < 0.6  ? 1.0 :
+           extractionRate < 0.8  ? 0.6 : 0.1;
+
+  var pullRate = 0, hoursElapsed = 0, estHoursLeft = null, velocityLabel = "";
+  if (origSnap && currSnap && origSnap.ts && currSnap.ts && origSnap.ts !== currSnap.ts) {
+    hoursElapsed = (currSnap.ts - origSnap.ts) / 3600000;
+    if (hoursElapsed > 0) {
+      pullRate = pulled.length / hoursElapsed;
+      if (pullRate > 0) estHoursLeft = currStats.total / pullRate;
+    }
+  }
+  var velocityRatio = origStats.total > 0 ? pullRate / (origStats.total * 0.2) : 0;
+  var f5 = currStats.hits > 0 ? Math.min(velocityRatio, 1) : 0;
+  if (pullRate > 0 && estHoursLeft !== null) {
+    if (estHoursLeft < 0.5)    velocityLabel = "Very fast -- less than 30 min left";
+    else if (estHoursLeft < 1) velocityLabel = "Fast -- under 1 hr remaining";
+    else if (estHoursLeft < 3) velocityLabel = "Moderate -- ~" + Math.round(estHoursLeft) + " hrs left";
+    else                       velocityLabel = "Slow -- ~" + Math.round(estHoursLeft) + " hrs left";
+  }
+
+  var score = Math.min(100, Math.round((f1*30) + (f2*20) + (f3*20) + (f4*15) + (f5*15)));
+
+  var level, cls, label;
+  if (score >= 80)      { level="attack";  cls="u-attack";  label="Attack Now"; }
+  else if (score >= 65) { level="watch";   cls="u-watch";   label="Watch"; }
+  else if (score >= 40) { level="neutral"; cls="u-neutral"; label="Neutral"; }
+  else                  { level="pass";    cls="u-pass";     label="Pass"; }
+
+  return {score:score, level:level, cls:cls, label:label,
+          evRatio:evRatio, f1:f1, f2:f2, f3:f3, f4:f4, f5:f5,
+          extractionRate:extractionRate,
+          pullRate:pullRate, hoursElapsed:hoursElapsed,
+          estHoursLeft:estHoursLeft, velocityLabel:velocityLabel};
+}
+
+// ---- Breakeven ----
+function calcBreakeven(price, cards) {
+  if (!cards || !cards.length) return null;
+  var vals = cards.map(function(c) { return c.val; }).sort(function(a,b) { return a-b; });
+  var n = vals.length;
+  var avg = sumArr(vals) / n;
+  var median = n % 2 === 0 ? (vals[n/2-1] + vals[n/2]) / 2 : vals[Math.floor(n/2)];
+  var hits = 0;
+  cards.forEach(function(c) { if (c.tier === "Grail" || c.tier === "Chase") hits++; });
+  var hitRate = hits / n;
+  var pullsFor50 = hitRate > 0 ? Math.ceil(Math.log(0.5) / Math.log(1 - hitRate)) : null;
+  return {
+    avgBreakeven: avg > 0 ? price / avg : null,
+    medBreakeven: median > 0 ? price / median : null,
+    pullsFor50: pullsFor50,
+    costFor50: pullsFor50 ? pullsFor50 * price : null,
+    avg: avg, median: median, hitRate: hitRate,
+    skewed: avg > median * 1.5
+  };
+}
+
+// ---- Global search ----
+function runSearch() {
+  var q = document.getElementById("gsearch").value.trim().toLowerCase();
+  document.getElementById("gclear").style.display = q ? "" : "none";
+  var res = document.getElementById("gresults");
+  if (!q) { res.style.display = "none"; res.innerHTML = ""; return; }
+
+  var hits = [];
+  TIERS.forEach(function(tier) {
+    var s = state[String(tier.price)];
+    if (!s.snapshots.length) return;
+    var origCards = s.snapshots[0].cards;
+    var currCards = s.snapshots.length >= 2 ? s.snapshots[1].cards : s.snapshots[0].cards;
+    var lbl = tier.custom && s.customPrice ? "Custom $" + s.customPrice : tier.label;
+    var currKeys = {};
+    currCards.forEach(function(c) {
+      var k = cardKey(c);
+      currKeys[k] = (currKeys[k] || 0) + 1;
+    });
+    // Search currently available cards
+    currCards.forEach(function(c) {
+      if (c.name.toLowerCase().indexOf(q) !== -1)
+        hits.push({name:c.name, val:c.val, tier:c.tier, pack:lbl, pulled:false});
+    });
+    // Track how many of each key we've seen in orig to handle multiples
+    var origSeen = {};
+    if (s.snapshots.length >= 2) {
+      origCards.forEach(function(c) {
+        var k = cardKey(c);
+        origSeen[k] = (origSeen[k] || 0) + 1;
+        var origCount = origSeen[k];
+        var currCount = currKeys[k] || 0;
+        if (origCount > currCount && c.name.toLowerCase().indexOf(q) !== -1)
+          hits.push({name:c.name, val:c.val, tier:c.tier, pack:lbl, pulled:true});
+      });
+    }
+  });
+
+  hits.sort(function(a,b) {
+    if (a.pulled !== b.pulled) return a.pulled ? 1 : -1;
+    return b.val - a.val;
+  });
+
+  if (!hits.length) {
+    res.innerHTML = "<div class='sr-wrap'><div class='sr-empty'>No cards found matching \"" + q + "\" across any loaded pack.</div></div>";
+    res.style.display = "";
+    return;
+  }
+  var liveCount = 0, pulledCount = 0;
+  hits.forEach(function(h) { if (h.pulled) pulledCount++; else liveCount++; });
+  var html = "<div class='sr-wrap'>";
+  html += "<div class='sr-head'><span>" + hits.length + " results for \"" + q + "\"</span><span>" + liveCount + " available &middot; " + pulledCount + " pulled</span></div>";
+  hits.forEach(function(h) {
+    var bc = h.tier === "Grail" ? "bg" : h.tier === "Chase" ? "bc" : "bb";
+    html += "<div class='sr-row' style='" + (h.pulled ? "opacity:0.5;" : "") + "'>";
+    html += "<span class='sr-name' title='" + h.name + "'>" + h.name + "</span>";
+    html += "<span class='sr-pack'>" + h.pack + "</span>";
+    html += "<span class='badge " + bc + "'>" + h.tier + "</span>";
+    html += "<span class='sr-val'>" + dollar(h.val) + "</span>";
+    html += "<span style='font-size:10px;color:" + (h.pulled ? "var(--bad)" : "var(--ok)") + ";'>" + (h.pulled ? "Pulled" : "Available") + "</span>";
+    html += "</div>";
+  });
+  html += "</div>";
+  res.innerHTML = html;
+  res.style.display = "";
+}
+
+function clearSearch() {
+  document.getElementById("gsearch").value = "";
+  document.getElementById("gclear").style.display = "none";
+  document.getElementById("gresults").style.display = "none";
+  document.getElementById("gresults").innerHTML = "";
+}
+
+// ---- Pull or No Pull ----
+// "Pull" when ALL three conditions are true:
+// 1. Remaining hit rate > original hit rate (hits are concentrated -- overdue)
+// 2. EV ratio > 1.0 (remaining avg exceeds pack price)
+// 3. At least one Grail or Chase still in the pool
+function calcPullSignal(price, origStats, currStats) {
+  if (!origStats || !currStats || !price) return {signal:"na", reason:"Need two snapshots to calculate."};
+
+  var origHitRate = origStats.hits / origStats.total;
+  var currHitRate = currStats.hits / currStats.total;
+  var evRatio = currStats.avg / price;
+  var hitsRemain = currStats.hits > 0;
+
+  // Check each condition
+  var hitConc = currHitRate > origHitRate;
+  var posEV = evRatio >= 1.0;
+
+  if (hitsRemain && hitConc && posEV) {
+    var concentration = ((currHitRate - origHitRate) / origHitRate * 100).toFixed(0);
+    return {
+      signal: "pull",
+      reason: "Hit rate is " + concentration + "% above original (" + pct(currHitRate) + " vs " + pct(origHitRate) + "), EV is " + evRatio.toFixed(2) + "x pack price, and hits remain.",
+      currHitRate: currHitRate,
+      origHitRate: origHitRate,
+      evRatio: evRatio
+    };
+  }
+
+  // Build reason for No Pull
+  var reasons = [];
+  if (!hitsRemain) reasons.push("no hits remain in pool");
+  else if (!hitConc) reasons.push("hit rate (" + pct(currHitRate) + ") is not above original (" + pct(origHitRate) + ")");
+  if (!posEV) reasons.push("EV ratio " + evRatio.toFixed(2) + "x is below pack price");
+
+  return {
+    signal: "nopull",
+    reason: "Conditions not met: " + reasons.join("; ") + ".",
+    currHitRate: currHitRate,
+    origHitRate: origHitRate,
+    evRatio: evRatio
+  };
+}
+
+// ---- Notifications ----
+function requestNotifPermission() {
+  if (!("Notification" in window)) {
+    document.getElementById("notif-status").textContent = "Browser notifications are not supported in this browser.";
+    return;
+  }
+  Notification.requestPermission().then(function(result) {
+    updateNotifBar(result);
+  });
+}
+
+function updateNotifBar(permission) {
+  var bar = document.getElementById("notif-bar");
+  var status = document.getElementById("notif-status");
+  var btn = document.getElementById("notif-btn");
+  if (!permission) permission = ("Notification" in window) ? Notification.permission : "unsupported";
+  if (permission === "granted") {
+    status.textContent = "Notifications enabled -- you will be alerted when any pack reaches Pull status.";
+    btn.style.display = "none";
+    bar.style.borderColor = "var(--ok)";
+  } else if (permission === "denied") {
+    status.textContent = "Notifications blocked. Enable them in your browser settings to use this feature.";
+    btn.style.display = "none";
+  }
+}
+
+function fireNotification(label, reason) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  new Notification("Instant Rips -- Pull Signal: " + label, {
+    body: reason,
+    icon: ""
+  });
+}
+
+// ---- Render ----
+function renderAll() {
+  var html = "";
+  TIERS.forEach(function(t) { html += renderSlot(t); });
+  document.getElementById("dashboard").innerHTML = html;
+}
+
+function renderSlot(tier) {
+  var key = String(tier.price);
+  var s = state[key];
+  var snaps = s.snapshots;
+  var hasOrig = snaps.length >= 1;
+  var hasCurr = snaps.length >= 2;
+  var effectivePrice = tier.custom ? s.customPrice : tier.price;
+  var hasCustomPrice = tier.custom && s.customPrice !== null;
+  var orig = hasOrig ? snaps[0] : null;
+  var curr = hasCurr ? snaps[1] : (hasOrig ? snaps[0] : null);
+  var origStats = orig ? poolStats(orig.cards) : null;
+  var currStats = curr ? poolStats(curr.cards) : null;
+  var pulled = (hasOrig && hasCurr) ? diffSnapshots(orig.cards, curr.cards) : [];
+  var urg = (origStats && currStats && effectivePrice)
+    ? calcUrgency(effectivePrice, origStats, currStats, pulled, orig, curr)
+    : null;
+
+  var urgBadge = urg
+    ? "<span class='ubadge " + urg.cls + "'>" + urg.label + "</span>"
+    : "<span class='ubadge u-empty'>No data</span>";
+
+  var out = "<div class='slot'>";
+
+  // Header
+  out += "<div class='slot-header'>";
+  if (tier.custom) {
+    if (hasCustomPrice) {
+      out += "<div><div class='slot-price'>" + dollar(effectivePrice) + "</div>";
+      out += "<div class='slot-label'>Custom pack <button style='font-size:10px;padding:2px 6px;margin-left:4px;' onclick='resetCustomPrice()'>Change</button></div></div>";
+    } else {
+      out += "<div style='flex:1;'><div class='slot-label' style='margin-bottom:5px;'>Custom pack -- enter price</div>";
+      out += "<div style='display:flex;gap:6px;align-items:center;'>";
+      out += "<span style='font-size:13px;color:var(--tx2);'>$</span>";
+      out += "<input type='number' id='custom-price-input' min='1' step='1' placeholder='e.g. 125' style='width:100px;font-size:14px;' onkeydown='if(event.key===\"Enter\")setCustomPrice()' />";
+      out += "<button class='btn-primary' onclick='setCustomPrice()'>Set</button>";
+      out += "</div></div>";
+    }
+  } else {
+    out += "<div><div class='slot-price'>" + dollar(tier.price) + "</div><div class='slot-label'>" + tier.label + "</div></div>";
+  }
+  out += urgBadge + "</div>";
+
+  out += "<div class='slot-body'>";
+
+  if (tier.custom && !hasCustomPrice) {
+    out += "<div class='empty-state'>Set a pack price above to start tracking.</div>";
+  } else if (!hasOrig) {
+    out += "<div class='empty-state'>No checklist loaded.<br>Paste the original checklist to start tracking.</div>";
+  } else {
+
+    // Urgency score bar
+    if (urg) {
+      var urgColor = urg.level==="attack" ? "#ef4444" : urg.level==="watch" ? "#f59e0b" : urg.level==="neutral" ? "#eab308" : "#22c55e";
+      out += "<div class='urg-row'>";
+      out += "<div style='font-size:10px;color:var(--tx2);width:90px;flex-shrink:0;'>Urgency score</div>";
+      out += "<div class='urg-bg'><div class='urg-fill' style='width:" + urg.score + "%;background:" + urgColor + ";'></div></div>";
+      out += "<div class='urg-num' style='color:" + urgColor + ";'>" + urg.score + "</div>";
+      out += "</div>";
+
+      var defText = urg.level === "attack"
+        ? "Strong buy signal (80+) -- EV is well above pack price, hits remain, extraction is in the sweet spot, and pull velocity confirms the window is closing."
+        : urg.level === "watch"
+        ? "Favorable conditions -- decent EV and hits remain. Paste an updated snapshot to track velocity."
+        : urg.level === "neutral"
+        ? "No strong signal. Pool may be too early or too degraded. Monitor and re-paste for updated velocity."
+        : "Pool has degraded. EV near or below pack price and most hits are gone. Not recommended.";
+
+      out += "<div class='urg-def' style='border-left-color:" + urgColor + ";'><strong style='color:" + urgColor + ";'>" + urg.label + "</strong> -- " + defText + "</div>";
+    }
+
+    // Key metrics
+    if (currStats) {
+      var evCls = currStats.avg >= effectivePrice * 1.2 ? "pos" : currStats.avg >= effectivePrice ? "warn" : "neg";
+      var origHitRate = origStats ? origStats.hitRate : null;
+      var currHitRate = currStats.hitRate;
+      var hitRateCls = origHitRate !== null && currHitRate > origHitRate ? "pos" : origHitRate !== null && currHitRate < origHitRate ? "neg" : "";
+      var hitRateDelta = origHitRate !== null ? ((currHitRate - origHitRate) * 100).toFixed(1) : null;
+      var hitRateDeltaHtml = hitRateDelta !== null
+        ? " <span style='font-size:10px;color:" + (parseFloat(hitRateDelta) >= 0 ? "var(--ok)" : "var(--bad)") + ";'>" + (parseFloat(hitRateDelta) >= 0 ? "+" : "") + hitRateDelta + "%</span>"
+        : "";
+      out += "<div class='metrics'>";
+      out += "<div class='metric'><div class='mlbl'>Remaining cards</div><div class='mval'>" + currStats.total;
+      if (origStats && origStats.total !== currStats.total) out += " <span style='font-size:10px;color:var(--bad);'>-" + (origStats.total - currStats.total) + "</span>";
+      out += "</div></div>";
+      out += "<div class='metric'><div class='mlbl'>Avg remaining</div><div class='mval " + evCls + "'>" + dollar(currStats.avg) + "</div></div>";
+      out += "<div class='metric'><div class='mlbl'>Hit rate (orig)</div><div class='mval'>" + (origHitRate !== null ? pct(origHitRate) : "--") + "</div></div>";
+      out += "<div class='metric'><div class='mlbl'>Hit rate (now)</div><div class='mval " + hitRateCls + "'>" + pct(currHitRate) + hitRateDeltaHtml + "</div></div>";
+      out += "<div class='metric'><div class='mlbl'>Hits remaining</div><div class='mval'>" + currStats.hits + (origStats ? " <span style='font-size:10px;color:var(--tx2);'>of " + origStats.hits + "</span>" : "") + "</div></div>";
+      out += "<div class='metric'><div class='mlbl'>EV ratio</div><div class='mval " + evCls + "'>" + (effectivePrice ? (currStats.avg / effectivePrice).toFixed(2) + "x" : "--") + "</div></div>";
+      out += "</div>";
+    }
+
+    // Pull or No Pull
+    if (origStats && currStats && effectivePrice) {
+      var ps = calcPullSignal(effectivePrice, origStats, currStats);
+      var pullCls = ps.signal === "pull" ? "pull-yes" : ps.signal === "nopull" ? "pull-no" : "pull-na";
+      var pullTxt = ps.signal === "pull" ? "Pull" : ps.signal === "nopull" ? "No Pull" : "Need snapshot";
+      out += "<div style='margin-bottom:12px;'>";
+      out += "<div style='display:flex;align-items:center;gap:10px;margin-bottom:6px;'>";
+      out += "<span style='font-size:11px;font-weight:500;color:var(--tx2);'>Pull or No Pull</span>";
+      out += "<span class='pull-badge " + pullCls + "'>" + pullTxt + "</span>";
+      out += "</div>";
+      out += "<div style='font-size:11px;color:var(--tx2);line-height:1.5;padding:6px 10px;background:var(--bg2);border-radius:var(--r);border-left:2px solid " + (ps.signal === "pull" ? "#16a34a" : "var(--bd2)") + ";'>" + ps.reason + "</div>";
+      out += "</div>";
+    }
+
+    // Base stats
+    if (curr) {
+      var bs = baseStats(curr.cards);
+      var bsOrig = orig ? baseStats(orig.cards) : null;
+      if (bs) {
+        var deltaHtml = "";
+        if (bsOrig) {
+          var delta = bs.avg - bsOrig.avg;
+          var dSign = delta >= 0 ? "+" : "";
+          var dCol = delta >= 0 ? "var(--ok)" : "var(--bad)";
+          deltaHtml = " <span style='font-size:9px;color:" + dCol + ";'>" + dSign + dollar(delta) + "</span>";
+        }
+        out += "<div class='base-stats'>";
+        out += "<div class='base-stats-title'>Base card stats</div>";
+        out += "<div class='base-grid'>";
+        out += "<div><div class='bs-lbl'>Avg</div><div class='bs-val'>" + dollar(bs.avg) + deltaHtml + "</div></div>";
+        out += "<div><div class='bs-lbl'>Median</div><div class='bs-val'>" + dollar(bs.median) + "</div></div>";
+        out += "<div><div class='bs-lbl'>Low</div><div class='bs-val'>" + dollar(bs.min) + "</div></div>";
+        out += "<div><div class='bs-lbl'>High</div><div class='bs-val'>" + dollar(bs.max) + "</div></div>";
+        out += "</div>";
+        out += "<div style='font-size:10px;color:var(--tx2);margin-top:5px;'>" + bs.below + " of " + bs.count + " base cards below avg</div>";
+        out += "</div>";
+      }
+    }
+
+    // EV vs pack price bar
+    if (urg) {
+      var evPct = Math.min(urg.evRatio / 2, 1) * 100;
+      var evColor = urg.evRatio >= 1.5 ? "#22c55e" : urg.evRatio >= 1.0 ? "#eab308" : "#ef4444";
+      out += "<div class='ev-section'>";
+      out += "<div class='ev-row'><span>EV vs pack price</span><span style='color:" + evColor + ";font-weight:500;'>" + urg.evRatio.toFixed(2) + "x</span></div>";
+      out += "<div class='ev-bg'><div class='ev-fill' style='width:" + evPct + "%;background:" + evColor + ";'></div></div>";
+      out += "</div>";
+    }
+
+    // Breakeven
+    if (curr && effectivePrice) {
+      var bk = calcBreakeven(effectivePrice, curr.cards);
+      if (bk) {
+        var avgBkCls = bk.avgBreakeven <= 1.5 ? "good" : bk.avgBreakeven <= 3 ? "warn" : "bad";
+        var medBkCls = bk.medBreakeven <= 2 ? "good" : bk.medBreakeven <= 4 ? "warn" : "bad";
+        var hitCostCls = bk.costFor50 && bk.costFor50 <= effectivePrice * 3 ? "good" : bk.costFor50 && bk.costFor50 <= effectivePrice * 6 ? "warn" : "bad";
+        out += "<div class='bk-section'>";
+        out += "<div class='bk-title'>Pulls to realize EV</div>";
+        out += "<div class='bk-grid'>";
+        out += "<div class='bk-cell'><div class='bk-lbl'>Avg-based breakeven</div><div class='bk-num " + avgBkCls + "'>" + (bk.avgBreakeven ? bk.avgBreakeven.toFixed(1) + " pulls" : "--") + "</div><div class='bk-sub'>avg pull " + dollar(bk.avg) + "</div></div>";
+        out += "<div class='bk-cell'><div class='bk-lbl'>Median-based breakeven</div><div class='bk-num " + medBkCls + "'>" + (bk.medBreakeven ? bk.medBreakeven.toFixed(1) + " pulls" : "--") + "</div><div class='bk-sub'>median pull " + dollar(bk.median) + "</div></div>";
+        out += "<div class='bk-cell'><div class='bk-lbl'>Pulls for 50% hit</div><div class='bk-num " + hitCostCls + "'>" + (bk.pullsFor50 ? bk.pullsFor50 + " pulls" : "--") + "</div><div class='bk-sub'>" + (bk.costFor50 ? dollar(bk.costFor50) + " total" : "no hits left") + "</div></div>";
+        out += "</div>";
+        if (bk.skewed) out += "<div class='bk-skew'>! Mean is 1.5x+ above median -- avg is skewed by a few high-value cards. Median breakeven is more realistic.</div>";
+        out += "</div>";
+      }
+    }
+
+    // Tier survival
+    if (origStats && currStats) {
+      out += "<div class='deg-section'>";
+      out += "<div class='deg-title'>Tier survival</div>";
+      if (origStats.ng > 0) {
+        var gP = currStats.ng / origStats.ng;
+        var gC = gP === 1 ? "#22c55e" : gP > 0.5 ? "#f59e0b" : "#ef4444";
+        out += "<div class='deg-row'><span class='deg-lbl'>Grails</span><div class='deg-bg'><div class='deg-fill' style='width:" + (gP*100) + "%;background:" + gC + ";'></div></div><span class='deg-val'>" + currStats.ng + "/" + origStats.ng + "</span></div>";
+      }
+      if (origStats.nc > 0) {
+        var cP = currStats.nc / origStats.nc;
+        var cC = cP === 1 ? "#22c55e" : cP > 0.5 ? "#f59e0b" : "#ef4444";
+        out += "<div class='deg-row'><span class='deg-lbl'>Chases</span><div class='deg-bg'><div class='deg-fill' style='width:" + (cP*100) + "%;background:" + cC + ";'></div></div><span class='deg-val'>" + currStats.nc + "/" + origStats.nc + "</span></div>";
+      }
+      if (origStats.nb > 0) {
+        var bP = currStats.nb / origStats.nb;
+        out += "<div class='deg-row'><span class='deg-lbl'>Base</span><div class='deg-bg'><div class='deg-fill' style='width:" + (bP*100) + "%;background:#888780;'></div></div><span class='deg-val'>" + currStats.nb + "/" + origStats.nb + "</span></div>";
+      }
+      out += "</div>";
+    }
+
+    // Score breakdown
+    if (urg) {
+      out += "<div class='deg-section'>";
+      out += "<div class='deg-title'>Score breakdown</div>";
+      var factors = [
+        {lbl:"EV ratio",       val:Math.round(urg.f1*30), max:30},
+        {lbl:"Hit survival",   val:Math.round(urg.f2*20), max:20},
+        {lbl:"Grail present",  val:Math.round(urg.f3*20), max:20},
+        {lbl:"Extraction rate",val:Math.round(urg.f4*15), max:15},
+        {lbl:"Pull velocity",  val:Math.round(urg.f5*15), max:15}
+      ];
+      factors.forEach(function(f) {
+        var fp = Math.round((f.val / f.max) * 100);
+        out += "<div class='deg-row'><span class='deg-lbl sb-lbl'>" + f.lbl + "</span>";
+        out += "<div class='deg-bg'><div class='deg-fill' style='width:" + fp + "%;background:var(--info);'></div></div>";
+        out += "<span class='deg-val'>" + f.val + "/" + f.max + "</span></div>";
+      });
+
+      // Velocity stats
+      if (urg.pullRate > 0) {
+        var tlColor = urg.estHoursLeft !== null && urg.estHoursLeft < 1 ? "var(--bad)" : urg.estHoursLeft !== null && urg.estHoursLeft < 3 ? "#f59e0b" : "var(--tx)";
+        var tlVal = urg.estHoursLeft !== null ? urg.estHoursLeft.toFixed(1) + "h" : "--";
+        out += "<div class='vel-grid'>";
+        out += "<div><div class='vel-lbl'>Pull rate</div><div class='vel-val'>" + urg.pullRate.toFixed(1) + "/hr</div></div>";
+        out += "<div><div class='vel-lbl'>Elapsed</div><div class='vel-val'>" + urg.hoursElapsed.toFixed(1) + "h</div></div>";
+        out += "<div><div class='vel-lbl'>Est. time left</div><div class='vel-val' style='color:" + tlColor + ";'>" + tlVal + "</div></div>";
+        out += "</div>";
+        if (urg.velocityLabel) out += "<div style='font-size:10px;color:var(--tx2);margin-top:4px;'>" + urg.velocityLabel + "</div>";
+      } else {
+        out += "<div style='font-size:10px;color:var(--tx2);margin-top:6px;'>Paste a second snapshot to enable velocity tracking.</div>";
+      }
+      out += "</div>";
+    }
+
+    // Pulled cards -- scrollable with log checkbox
+    if (pulled.length > 0) {
+      var pgn = 0, pcn = 0, pbn = 0;
+      pulled.forEach(function(c) { if (c.tier==="Grail") pgn++; else if (c.tier==="Chase") pcn++; else pbn++; });
+      out += "<div style='margin-bottom:10px;'>";
+      out += "<div class='pulled-header'><span class='pulled-title'>Pulled cards (" + pulled.length + " total)</span>";
+      out += "<span style='font-size:10px;color:var(--tx2);display:flex;gap:6px;'>";
+      if (pgn > 0) out += "<span style='color:#BA7517;'>" + pgn + " Grail</span>";
+      if (pcn > 0) out += "<span style='color:var(--info);'>" + pcn + " Chase</span>";
+      if (pbn > 0) out += "<span>" + pbn + " Base</span>";
+      out += "</span></div>";
+      out += "<div class='pulled-list'>";
+      pulled.forEach(function(c) {
+        var bc = c.tier==="Grail" ? "bg" : c.tier==="Chase" ? "bc" : "bb";
+        var safeName = c.name.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        out += "<div class='pulled-row'>";
+        out += "<label style='display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;min-width:0;' title='Check to log as my pull'>";
+        out += "<input type='checkbox' style='flex-shrink:0;cursor:pointer;' onchange='preLogFromPulled(this,\"" + safeName + "\"," + c.val + ",\"" + c.tier + "\",\"" + key + "\"," + effectivePrice + ")' />";
+        out += "<span class='pulled-name'>" + c.name + "</span>";
+        out += "</label>";
+        out += "<div class='pulled-right'><span class='badge " + bc + "'>" + c.tier + "</span><span style='font-size:11px;font-weight:500;'>" + dollar(c.val) + "</span></div>";
+        out += "</div>";
+      });
+      out += "</div>";
+      out += "<div style='font-size:10px;color:var(--tx2);margin-top:4px;'>Check a card to pre-fill the P&amp;L log form.</div>";
+      out += "</div>";
+    }
+
+    // Timestamps
+    out += "<div style='display:flex;gap:10px;font-size:10px;color:var(--tx2);margin-top:6px;flex-wrap:wrap;'>";
+    if (orig) out += "<span>Original: " + orig.time + " (" + orig.cards.length + " cards)</span>";
+    if (hasCurr) out += "<span>Updated: " + curr.time + " (" + curr.cards.length + " cards)</span>";
+    out += "</div>";
+  }
+
+  out += "</div>"; // slot-body
+
+  // Footer
+  out += "<div class='slot-footer'>";
+  if (!hasOrig) {
+    out += "<button class='btn-primary' onclick='openModal(\"" + key + "\")'>Paste original checklist</button>";
+  } else {
+    out += "<button class='btn-primary' onclick='openModal(\"" + key + "\")'>Update checklist</button>";
+    out += "<button class='btn-danger' onclick='resetSlot(\"" + key + "\")'>Reset</button>";
+  }
+  if (s.lastUpdated) out += "<span class='slot-time'>Updated " + s.lastUpdated + "</span>";
+  out += "</div>";
+
+  out += "</div>"; // slot
+  return out;
+}
+
+// ---- Custom price ----
+function setCustomPrice() {
+  var input = document.getElementById("custom-price-input");
+  if (!input) return;
+  var val = parseFloat(input.value);
+  if (!val || val <= 0) { alert("Please enter a valid pack price."); return; }
+  state["custom"].customPrice = val;
+  renderAll();
+}
+
+function resetCustomPrice() {
+  state["custom"] = {snapshots:[], lastUpdated:null, customPrice:null};
+  renderAll();
+}
+
+// ---- Modal ----
+function openModal(key) {
+  activeModal = key;
+  var tier = null;
+  TIERS.forEach(function(t) { if (String(t.price) === key) tier = t; });
+  var s = state[key];
+  var isFirst = s.snapshots.length === 0;
+  var lbl = tier && tier.custom && s.customPrice ? "Custom $" + s.customPrice : (tier ? tier.label : key);
+  document.getElementById("modal-title").textContent = (isFirst ? "Paste original checklist -- " : "Update checklist -- ") + lbl;
+  document.getElementById("modal-sub").textContent = isFirst
+    ? "Paste the full checklist when the pack drops. This becomes your baseline."
+    : "Paste the current remaining checklist to compare against the original.";
+  document.getElementById("modal-ta").value = "";
+  document.getElementById("modal").style.display = "flex";
+  document.getElementById("modal-ta").focus();
+}
+
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+  activeModal = null;
+}
+
+function submitPaste() {
+  if (!activeModal) return;
+  var raw = document.getElementById("modal-ta").value.trim();
+  if (!raw) return;
+  var cards = parsePaste(raw);
+  if (!cards.length) { alert("Could not parse any cards -- check the format and try again."); return; }
+  var s = state[activeModal];
+  var snap = {cards:cards, time:timeStr(), ts:Date.now()};
+  s.snapshots = s.snapshots.length === 0 ? [snap] : [s.snapshots[0], snap];
+  s.lastUpdated = timeStr();
+  closeModal();
+  renderAll();
+  if (document.getElementById("gsearch").value.trim()) runSearch();
+
+  // Fire pull signal notifications for any slot now showing Pull
+  if ("Notification" in window && Notification.permission === "granted") {
+    TIERS.forEach(function(t) {
+      var key = String(t.price);
+      var sl = state[key];
+      if (sl.snapshots.length < 2) return;
+      var ep = t.custom ? sl.customPrice : t.price;
+      if (!ep) return;
+      var oStats = poolStats(sl.snapshots[0].cards);
+      var cStats = poolStats(sl.snapshots[1].cards);
+      var ps = calcPullSignal(ep, oStats, cStats);
+      if (ps.signal === "pull") {
+        var lbl = t.custom ? "Custom $" + ep : t.label;
+        fireNotification(lbl, ps.reason);
+      }
+    });
+  }
+}
+
+function resetSlot(key) {
+  if (!confirm("Reset this slot? All snapshot data will be cleared.")) return;
+  var isCustom = key === "custom";
+  state[key] = {snapshots:[], lastUpdated:null, customPrice: isCustom ? null : undefined};
+  renderAll();
+}
+
+// ---- Pre-fill P&L log from a pulled card checkbox ----
+function preLogFromPulled(checkbox, cardName, cardVal, cardTier, tierKey, packPrice) {
+  if (!checkbox.checked) {
+    // Unchecked -- clear the form
+    document.getElementById("log-card").value = "";
+    document.getElementById("log-val").value = "";
+    document.getElementById("log-card-tier").value = "Base";
+    return;
+  }
+
+  // Switch to P&L tab
+  var pnlTab = document.querySelector(".main-tab:nth-child(2)");
+  if (pnlTab) {
+    document.querySelectorAll(".main-tab").forEach(function(b){b.classList.remove("on");});
+    pnlTab.classList.add("on");
+    document.querySelectorAll(".mpanel").forEach(function(p){p.classList.remove("on");});
+    document.getElementById("panel-pnl").classList.add("on");
+    renderPnl();
+  }
+
+  // Pre-fill the log form
+  document.getElementById("log-tier").value = tierKey;
+  document.getElementById("log-price").value = packPrice || "";
+  document.getElementById("log-card").value = cardName;
+  document.getElementById("log-val").value = cardVal;
+  document.getElementById("log-card-tier").value = cardTier;
+
+  // Scroll to log form smoothly
+  setTimeout(function() {
+    var form = document.querySelector(".log-form");
+    if (form) form.scrollIntoView({behavior:"smooth", block:"start"});
+  }, 150);
+}
+
+// ---- Main tab switching ----
+function setMainTab(name, btn) {
+  document.querySelectorAll(".main-tab").forEach(function(b){b.classList.remove("on");});
+  btn.classList.add("on");
+  document.querySelectorAll(".mpanel").forEach(function(p){p.classList.remove("on");});
+  document.getElementById("panel-"+name).classList.add("on");
+  if (name === "pnl") renderPnl();
+}
+
+// ---- P&L Storage (in-memory with localStorage persistence) ----
+var rips = [];
+
+function loadRips() {
+  try {
+    var stored = localStorage.getItem("ir_rips");
+    if (stored) rips = JSON.parse(stored);
+  } catch(e) { rips = []; }
+}
+
+function saveRips() {
+  try { localStorage.setItem("ir_rips", JSON.stringify(rips)); } catch(e) {}
+}
+
+function logRip() {
+  var tierKey = document.getElementById("log-tier").value;
+  var price = parseFloat(document.getElementById("log-price").value);
+  var card = document.getElementById("log-card").value.trim();
+  var val = parseFloat(document.getElementById("log-val").value);
+  var cardTier = document.getElementById("log-card-tier").value;
+  var notes = document.getElementById("log-notes").value.trim();
+
+  if (!price || price <= 0) { alert("Please enter a valid pack price paid."); return; }
+  if (!val && val !== 0) { alert("Please enter the Card Ladder value of the card pulled."); return; }
+
+  var tierLabel = {
+    "75":"Baseball $75","custom":"Custom","150":"Baseball $150",
+    "250":"Baseball $250","500":"Baseball $500","1000":"Baseball $1,000"
+  }[tierKey] || tierKey;
+
+  // If custom slot has a price set, use it as default
+  if (tierKey === "custom" && state["custom"] && state["custom"].customPrice && !document.getElementById("log-price").value) {
+    price = state["custom"].customPrice;
+  }
+
+  var rip = {
+    id: Date.now(),
+    ts: Date.now(),
+    date: new Date().toLocaleDateString(),
+    time: timeStr(),
+    tierKey: tierKey,
+    tierLabel: tierLabel,
+    price: price,
+    card: card || "--",
+    val: val,
+    cardTier: cardTier,
+    notes: notes,
+    pnl: val - price
+  };
+
+  rips.push(rip);
+  saveRips();
+
+  // Clear form
+  document.getElementById("log-card").value = "";
+  document.getElementById("log-val").value = "";
+  document.getElementById("log-notes").value = "";
+  document.getElementById("log-status").textContent = "Logged! P&L: " + (rip.pnl >= 0 ? "+" : "") + dollar(rip.pnl);
+  setTimeout(function(){ document.getElementById("log-status").textContent = ""; }, 3000);
+
+  renderPnl();
+}
+
+function deleteRip(id) {
+  if (!confirm("Delete this rip entry?")) return;
+  rips = rips.filter(function(r){ return r.id !== id; });
+  saveRips();
+  renderPnl();
+}
+
+function renderPnl() {
+  if (!rips.length) {
+    document.getElementById("pnl-stats").innerHTML = "<div style='color:var(--tx2);font-size:13px;grid-column:1/-1;'>No rips logged yet. Use the form below to log your first rip.</div>";
+    document.getElementById("pnl-by-tier").innerHTML = "";
+    document.getElementById("pnl-chart").innerHTML = "<div style='color:var(--tx2);font-size:12px;margin:auto;'>No rips logged yet.</div>";
+    document.getElementById("log-tbody").innerHTML = "";
+    document.getElementById("log-empty").style.display = "";
+    return;
+  }
+  document.getElementById("log-empty").style.display = "none";
+
+  // ---- Summary stats ----
+  var totalSpent = 0, totalVal = 0, hits = 0, grails = 0;
+  rips.forEach(function(r){
+    totalSpent += r.price;
+    totalVal += r.val;
+    if (r.cardTier === "Chase" || r.cardTier === "Grail") hits++;
+    if (r.cardTier === "Grail") grails++;
+  });
+  var totalPnl = totalVal - totalSpent;
+  var roi = totalSpent > 0 ? (totalPnl / totalSpent * 100) : 0;
+  var hitRate = rips.length > 0 ? hits / rips.length : 0;
+  var avgPull = totalVal / rips.length;
+  var best = rips.reduce(function(a,b){ return b.pnl > a.pnl ? b : a; }, rips[0]);
+  var worst = rips.reduce(function(a,b){ return b.pnl < a.pnl ? b : a; }, rips[0]);
+
+  var stats = [
+    {lbl:"Total rips", val:rips.length, cls:"neu", fmt:function(v){return v;}},
+    {lbl:"Total spent", val:totalSpent, cls:"neg", fmt:dollar},
+    {lbl:"Total CL value", val:totalVal, cls:"neu", fmt:dollar},
+    {lbl:"Net P&L", val:totalPnl, cls:totalPnl>=0?"pos":"neg", fmt:function(v){return (v>=0?"+":"")+dollar(v);}},
+    {lbl:"ROI", val:roi, cls:roi>=0?"pos":"neg", fmt:function(v){return (v>=0?"+":"")+v.toFixed(1)+"%";}},
+    {lbl:"Hit rate", val:hitRate, cls:"neu", fmt:function(v){return (v*100).toFixed(1)+"%";}},
+    {lbl:"Avg pull value", val:avgPull, cls:"neu", fmt:dollar},
+    {lbl:"Best pull P&L", val:best.pnl, cls:"pos", fmt:function(v){return (v>=0?"+":"")+dollar(v);}},
+    {lbl:"Worst pull P&L", val:worst.pnl, cls:"neg", fmt:function(v){return (v>=0?"+":"")+dollar(v);}}
+  ];
+
+  var statsHtml = "";
+  stats.forEach(function(s){
+    statsHtml += "<div class='pnl-stat'><div class='pnl-lbl'>"+s.lbl+"</div><div class='pnl-val "+s.cls+"'>"+s.fmt(s.val)+"</div></div>";
+  });
+  document.getElementById("pnl-stats").innerHTML = statsHtml;
+
+  // ---- P&L by tier ----
+  var tierMap = {};
+  rips.forEach(function(r){
+    if (!tierMap[r.tierKey]) tierMap[r.tierKey] = {label:r.tierLabel, spent:0, val:0, count:0, hits:0};
+    tierMap[r.tierKey].spent += r.price;
+    tierMap[r.tierKey].val += r.val;
+    tierMap[r.tierKey].count++;
+    if (r.cardTier === "Chase" || r.cardTier === "Grail") tierMap[r.tierKey].hits++;
+  });
+  var tierHtml = "";
+  Object.keys(tierMap).forEach(function(k){
+    var t = tierMap[k];
+    var tPnl = t.val - t.spent;
+    var tRoi = t.spent > 0 ? (tPnl/t.spent*100).toFixed(1) : "0.0";
+    var pnlCol = tPnl >= 0 ? "var(--ok)" : "var(--bad)";
+    tierHtml += "<div class='tier-pnl-card'>";
+    tierHtml += "<div class='tier-pnl-label'>"+t.label+"</div>";
+    tierHtml += "<div class='tier-pnl-pnl' style='color:"+pnlCol+";'>"+(tPnl>=0?"+":"")+dollar(tPnl)+"</div>";
+    tierHtml += "<div class='tier-pnl-sub'>"+t.count+" rips &middot; "+tRoi+"% ROI &middot; "+(t.hits/t.count*100).toFixed(0)+"% hit rate</div>";
+    tierHtml += "</div>";
+  });
+  document.getElementById("pnl-by-tier").innerHTML = tierHtml;
+
+  // ---- Cumulative P&L chart ----
+  var cumulative = 0;
+  var points = rips.map(function(r){ cumulative += r.pnl; return cumulative; });
+  var minP = Math.min(0, Math.min.apply(null, points));
+  var maxP = Math.max(0, Math.max.apply(null, points));
+  var range = maxP - minP || 1;
+  var chartHtml = "<div class='chart-zero'></div>";
+  var zeroBottom = (-minP / range * 100);
+  chartHtml = "<div class='chart-zero' style='bottom:calc("+zeroBottom.toFixed(1)+"% + 20px);'></div>";
+  rips.forEach(function(r, i){
+    var p = points[i];
+    var col = p >= 0 ? "#22c55e" : "#ef4444";
+    var heightPct = Math.abs(p - (i>0?points[i-1]:0)) / range * 100;
+    var bottomPct = (Math.min(p, i>0?points[i-1]:0) - minP) / range * 100;
+    chartHtml += "<div class='chart-bar-wrap'>";
+    chartHtml += "<div class='chart-bar' style='height:"+Math.max(2,heightPct)+"%;background:"+col+";position:absolute;bottom:calc("+bottomPct.toFixed(1)+"% + 20px);width:80%;'></div>";
+    chartHtml += "<div class='chart-bar-lbl'>#"+(i+1)+"</div>";
+    chartHtml += "</div>";
+  });
+  document.getElementById("pnl-chart").innerHTML = chartHtml;
+
+  // ---- Rip log table ----
+  var tbodyHtml = "";
+  var ripsSorted = rips.slice().reverse(); // most recent first
+  ripsSorted.forEach(function(r){
+    var pnlCol = r.pnl >= 0 ? "var(--ok)" : "var(--bad)";
+    var bc = r.cardTier==="Grail"?"bg":r.cardTier==="Chase"?"bc":"bb";
+    tbodyHtml += "<tr>";
+    tbodyHtml += "<td>"+r.date+" "+r.time+"</td>";
+    tbodyHtml += "<td>"+r.tierLabel+"</td>";
+    tbodyHtml += "<td>"+dollar(r.price)+"</td>";
+    tbodyHtml += "<td title='"+r.card+"'><span class='badge "+bc+"' style='margin-right:4px;'>"+r.cardTier+"</span>"+r.card+"</td>";
+    tbodyHtml += "<td>"+dollar(r.val)+"</td>";
+    tbodyHtml += "<td style='color:"+pnlCol+";font-weight:500;'>"+(r.pnl>=0?"+":"")+dollar(r.pnl)+"</td>";
+    tbodyHtml += "<td title='"+r.notes+"'>"+r.notes+"</td>";
+    tbodyHtml += "<td><button class='del-btn' onclick='deleteRip("+r.id+")'>x</button></td>";
+    tbodyHtml += "</tr>";
+  });
+  document.getElementById("log-tbody").innerHTML = tbodyHtml;
+}
+
+// Auto-fill price when tier changes in log form
+document.addEventListener("DOMContentLoaded", function() {
+  var tierSel = document.getElementById("log-tier");
+  var priceIn = document.getElementById("log-price");
+  if (tierSel) {
+    tierSel.addEventListener("change", function() {
+      var key = tierSel.value;
+      if (key === "custom") {
+        var cp = state["custom"] && state["custom"].customPrice;
+        priceIn.value = cp ? cp : "";
+      } else {
+        priceIn.value = key;
+      }
+    });
+    // Set initial price
+    priceIn.value = "75";
+  }
+});
+
+
+
+// Init notification bar
+if ("Notification" in window && Notification.permission === "granted") {
+  updateNotifBar("granted");
+} else if ("Notification" in window && Notification.permission === "denied") {
+  updateNotifBar("denied");
+}
+
+document.getElementById("modal").addEventListener("click", function(e) {
+  if (e.target === this) closeModal();
+});
+
+loadRips();
+renderAll();
+</script>
+</body>
+</html>
